@@ -1,6 +1,6 @@
 // Gulp tasks
 
-// gulp: 				run default gulp task (sass, js, watch, browserSync) for web development;
+// gulp: 			run default gulp task (sass, js, watch, browserSync) for web development;
 // build: 			build project to dist folder (cleanup, image optimize, removing unnecessary files);
 // deploy: 			project deployment on the server from dist folder via FTP;
 // clearcache: 	clear all gulp cache.
