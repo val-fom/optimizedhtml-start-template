@@ -106,7 +106,7 @@ gulp.task('build', ['removedist', 'imagemin', 'sass', 'scripts'], function() {
 });
 
 
-// загрузка проекта на сервер
+// выгрузка проекта на рабочий сервер из папки dist по FTP;
 gulp.task('deploy', function() {
 
 	var conn = ftp.create({
@@ -127,6 +127,6 @@ gulp.task('deploy', function() {
 });
 
 gulp.task('removedist', function() { return del.sync('dist'); }); // Удаляем папку dist перед сборкой
-gulp.task('clearcache', function () { return cache.clearAll(); });
+gulp.task('clearcache', function () { return cache.clearAll(); }); // очистка кеша gulp. Полезно для очистки кеш картинок и закешированных путей.
 
 gulp.task('default', ['watch']);
