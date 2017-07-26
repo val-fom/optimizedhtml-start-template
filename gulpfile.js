@@ -20,7 +20,7 @@
 
 
 
-var gulp           = require('gulp'), // Подключаем Gulp 
+var gulp           = require('gulp'), // Подключаем Gulp
 		gutil          = require('gulp-util' ),
 		sass           = require('gulp-sass'), //Подключаем Sass пакет,
 		browserSync    = require('browser-sync'), // Подключаем Browser Sync
@@ -32,18 +32,28 @@ var gulp           = require('gulp'), // Подключаем Gulp
 		imagemin       = require('gulp-imagemin'), // Подключаем библиотеку для работы с изображениями
 		cache          = require('gulp-cache'), // Подключаем библиотеку кеширования
 		autoprefixer   = require('gulp-autoprefixer'), // Подключаем библиотеку для автоматического добавления префиксов
-		bourbon        = require('node-bourbon'), //A simple and lightweight mixin library for Sass
 		ftp            = require('vinyl-ftp'), //Blazing fast vinyl adapter for FTP. Supports parallel transfers, conditional transfers, buffered or streamed files, and more. Often performs better than your favorite desktop FTP client
-		notify         = require("gulp-notify"); //gulp plugin to send messages based on Vinyl Files or Errors to Mac OS X, Linux or Windows using the node-notifier module. Fallbacks to Growl or simply logging
+		notify         = require("gulp-notify"), //gulp plugin to send messages based on Vinyl Files or Errors to Mac OS X, Linux or Windows using the node-notifier module. Fallbacks to Growl or simply logging
+        rsync          = require('gulp-rsync');
 
 // Скрипты проекта
-gulp.task('scripts', function() {
-	return gulp.src([ // Берем все необходимые библиотеки
+
+gulp.task('common-js', function() {
+	return gulp.src([  // Берем все необходимые библиотеки
+		'app/js/common.js',  // Всегда в конце
+		])
+	.pipe(concat('common.min.js'))  // Собираем их в кучу в новом файле common.min.js
+	.pipe(uglify()) // Сжимаем JS файл
+	.pipe(gulp.dest('app/js'));  // Выгружаем в папку app/js
+});
+
+gulp.task('js', ['common-js'], function() {
+	return gulp.src([
 		'app/libs/jquery/dist/jquery.min.js',
-		'app/js/common.js', // Всегда в конце
+		'app/js/common.min.js', // Всегда в конце
 		])
 	.pipe(concat('scripts.min.js')) // Собираем их в кучу в новом файле scripts.min.js
-	.pipe(uglify()) // Сжимаем JS файл
+	// .pipe(uglify()) // Минимизировать весь js (на выбор)
 	.pipe(gulp.dest('app/js')) // Выгружаем в папку app/js
 	.pipe(browserSync.reload({stream: true}));
 });
@@ -61,19 +71,17 @@ gulp.task('browser-sync', function() { // Создаем таск browser-sync
 
 gulp.task('sass', function() { // Создаем таск Sass
 	return gulp.src('app/sass/**/*.sass') // Берем источник
-	.pipe(sass({ // Преобразуем Sass в CSS посредством gulp-sass
-		includePaths: bourbon.includePaths
-	}).on("error", notify.onError()))
+	.pipe(sass({outputStyle: 'expand'}).on("error", notify.onError())) // Преобразуем Sass в CSS посредством gulp-sass
 	.pipe(rename({suffix: '.min', prefix : ''}))
 	.pipe(autoprefixer(['last 15 versions'])) // Создаем префиксы
-	.pipe(cleanCSS())
+	.pipe(cleanCSS()) // Опционально, закомментировать при отладке
 	.pipe(gulp.dest('app/css')) // Выгружаем результата в папку app/css
 	.pipe(browserSync.reload({stream: true})); // Обновляем CSS на странице при изменении
 });
 
-gulp.task('watch', ['sass', 'scripts', 'browser-sync'], function() {
+gulp.task('watch', ['sass', 'js', 'browser-sync'], function() {
 	gulp.watch('app/sass/**/*.sass', ['sass']); // Наблюдение за sass файлами в папке sass
-	gulp.watch(['libs/**/*.js', 'app/js/common.js'], ['scripts']); // Наблюдение за JS файлами в папке js
+	gulp.watch(['libs/**/*.js', 'app/js/common.js'], ['js']);  // Наблюдение за JS файлами в папке js
 	gulp.watch('app/*.html', browserSync.reload); // Наблюдение за HTML файлами в корне проекта
 });
 
@@ -84,7 +92,7 @@ gulp.task('imagemin', function() {
 });
 
 // Сборка проекта в продакшн
-gulp.task('build', ['removedist', 'imagemin', 'sass', 'scripts'], function() {
+gulp.task('build', ['removedist', 'imagemin', 'sass', 'js'], function() {
 
 	var buildFiles = gulp.src([ // Переносим HTML в продакшен
 		'app/*.html',
@@ -124,6 +132,18 @@ gulp.task('deploy', function() {
 	return gulp.src(globs, {buffer: false})
 	.pipe(conn.dest('/path/to/folder/on/server'));
 
+});
+
+gulp.task('rsync', function() {
+	return gulp.src('dist/**')
+	.pipe(rsync({
+		root: 'dist/',
+		hostname: 'username@yousite.com',
+		destination: 'yousite/public_html/',
+		archive: true,
+		silent: false,
+		compress: true
+	}));
 });
 
 gulp.task('removedist', function() { return del.sync('dist'); }); // Удаляем папку dist перед сборкой
